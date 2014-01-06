@@ -1,0 +1,63 @@
+<?php
+function tynt_menu() {
+  $items['admin/config/services/tynt'] = array(
+      'title' => 'Tynt',
+      'description' => 'Benefit from user copy & paste activity to drive SEO, traffic, editorial insights, and more.',
+      'type' => MENU_NORMAL_ITEM,
+      'page callback' => 'drupal_get_form',
+      'page arguments' => array('tynt_options'),
+      'access arguments' => array('access content')
+  );
+  return $items;
+}
+
+function tynt_options() {
+  $settings = variable_get('tynt_settings', array());
+
+  $form = array();
+  $form['#tree'] = TRUE;
+  $form['tynt_settings']['tynt_id'] = array(
+      '#type' => 'textfield',
+      '#title' => t('Tynt ID'),
+      '#description' => t('The ID of the site'),
+      '#default_value' => !empty($settings['tynt_id']) ? $settings['tynt_id'] : '',
+      '#maxlength' => 255,
+      '#required' => TRUE
+  );
+  $form['tynt_settings']['user_logged'] = array(
+      '#type' => 'checkbox',
+      '#title' => t('Logged-in Users'),
+      '#description' => t('Turn Tynt on or off for logged-in users.'),
+      '#default_value' => !empty($settings['user_logged']) ? $settings['user_logged'] : 0,
+  );
+  $form['submit'] = array(
+      '#type' => 'submit',
+      '#value' => 'Save Configuration'
+  );
+
+  return $form;
+}
+
+function tynt_options_submit(&$form, &$form_state) {
+  $values = $form_state['values'];
+  variable_set('tynt_settings', $values['tynt_settings']);
+  drupal_set_message('Your settings have been saved.');
+}
+
+function tynt_preprocess_html(&$variables, $hook) {
+  $settings = variable_get('tynt_settings', array());
+  $hide_tynt = $settings['user_logged'];
+
+  if ($hide_tynt == 0 || ($hide_tynt == 1 && !user_is_logged_in())) {
+    $tynt = '
+    // BEGIN Tynt Script
+    if(document.location.protocol==\'http:\'){
+     var Tynt=Tynt||[];Tynt.push(\'' . $settings['tynt_id'] . '\');
+     (function(){var s=document.createElement(\'script\');s.async="async";s.type="text/javascript";s.src=\'http://tcr.tynt.com/ti.js\';var h=document.getElementsByTagName(\'script\')[0];h.parentNode.insertBefore(s,h);})();
+    }
+    // END Tynt Script
+    ';
+    drupal_add_js($tynt, 'inline');
+  }
+
+}
